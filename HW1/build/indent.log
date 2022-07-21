@@ -1,0 +1,51 @@
+INFO:  latexindent version 3.17.2, 2022-04-14, a script to indent .tex files
+       latexindent lives here: /usr/share/texmf-dist/scripts/latexindent/
+       Sat Jul  9 17:17:03 2022
+       Reading input from STDIN
+INFO:  Processing switches:
+       -m|--modifylinebreaks: modify line breaks
+       -c|--cruft: cruft directory
+INFO:  Directory for backup files and build/indent.log:
+       build
+INFO:  YAML settings read: defaultSettings.yaml
+       Reading defaultSettings.yaml from /usr/share/texmf-dist/scripts/latexindent/defaultSettings.yaml
+INFO:  YAML settings read: indentconfig.yaml or .indentconfig.yaml
+       Reading path information from /home/baelyk/.indentconfig.yaml
+       (Alternatively /home/baelyk/indentconfig.yaml can be used)
+       ---
+       paths:
+         - /home/baelyk/.config/latexindent/settings.yaml
+
+INFO:  -l switch used without filename, will search for the following files in turn:
+       localSettings.yaml,latexindent.yaml,.localSettings.yaml,.latexindent.yaml
+INFO:  YAML settings read: -l switch
+       Multiple localSettings found, separated by commas:
+       localSettings.yaml, latexindent.yaml, .localSettings.yaml, .latexindent.yaml
+WARN:  yaml file not found: localSettings.yaml not found. Proceeding without it.
+WARN:  yaml file not found: latexindent.yaml not found. Proceeding without it.
+WARN:  yaml file not found: .localSettings.yaml not found. Proceeding without it.
+WARN:  yaml file not found: .latexindent.yaml not found. Proceeding without it.
+INFO:  YAML settings, reading from the following files:
+       Reading USER settings from /home/baelyk/.config/latexindent/settings.yaml
+       ---
+       lookForAlignDelims:
+         align: '0'
+         align*: '0'
+       modifyLineBreaks:
+         textWrapOptions:
+           blocksFollow:
+             other: "(?x)\n\\\\\\]\n|\n\\\\item(?:\\h|\\[)\n|\n\\\\begin|{problem\\}\n|\n\\\\end|{problem\\}\n|\n\\\\begin|{solution\\}\n|\n\\\\end|{solution\\}"
+           columns: '100'
+           multipleSpacesToSingle: '1'
+       noAdditionalIndent:
+         solution: '1'
+
+INFO:  Phase 1: searching for objects
+INFO:  Phase 2: finding surrounding indentation
+INFO:  Phase 3: indenting objects
+INFO:  Phase 4: final indentation check
+INFO:  Output routine:
+       Not outputting to file; see -w and -o switches for more options.
+       --------------
+INFO:  Please direct all communication/issues to:
+        https://github.com/cmhughes/latexindent.pl
