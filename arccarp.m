@@ -31,28 +31,28 @@ while max(P(:, 2)) > epsilon
 	i = i + 1
 	% This gets the optimal v.
 	v = fmincon(...
-		% @cdr_obj_fun is the objective function from the paper
+		... % @cdr_obj_fun is the objective function from the paper
 		@cdr_obj_fun, ...
-		% x0 is our initial point, always 0
+		... % x0 is our initial point, always 0
 		x0, ...
-		% Ain are our inequalies
+		... % Ain are our inequalies
 		Ain, ...
-		% Our inequalities are all >= 0
+		... % Our inequalities are all >= 0
 		zeros(size(Ain, 1), 1), ...
-		% Aeq are our equalities
+		... % Aeq are our equalities
 		Aeq, ...
-		% Our equaities are all = 0
+		... % Our equaities are all = 0
 		zeros(size(Aeq, 1), 1), ...
-		% The lower bound for the velocity of P(1) and P(2) is zero. Add a lower
-		%   bound for the y velocity of P(3) to the smallest positive number matlab
-		%   can represent to avoid the zero vector as a solution.
+		... % The lower bound for the velocity of P(1) and P(2) is zero. Add a lower
+		... %   bound for the y velocity of P(3) to the smallest positive number matlab
+		... %   can represent to avoid the zero vector as a solution.
 		[fix; 0; realmin], ...
-		% The upper bound for the velocities of P(1) and P(2) is zero to fix them
+		... % The upper bound for the velocities of P(1) and P(2) is zero to fix them
 		fix, ...
-		% donothing is a function that does nothing because we have no nonlinear
-		%   constraints, but must still provde something to the optimizer
+		... % donothing is a function that does nothing because we have no nonlinear
+		... %   constraints, but must still provde something to the optimizer
 		donothing, ...
-		% Our options, as above
+		... % Our options, as above
 		options)
 
 	% Update all the points based on the optimal velocities
