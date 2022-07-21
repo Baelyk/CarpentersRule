@@ -7,10 +7,6 @@ P = spiral(epsilon)
 
 % Start the optimization at the zero vector, height 2*n because each point has x and y velocity
 x0 = zeros(2 * size(P, 1), 1)
-% Encode the equalities into a matrix Aeq
-Aeq = sparse(create_Aeq(P))
-% Encode the inequalities
-Ain = sparse(create_Ain(P))
 % Set the lower and upper bound of P(1,:) and P(2,:) to 0
 fix = [0 0 0 0]';
 % Set some options:
@@ -27,8 +23,18 @@ options = optimoptions(@fmincon, ...
 % Run the optimizer while the largest y-coord of any point is greater than
 % epsilon. My hope was that after that it would be mostly straight.
 i = 0
-while max(P(:, 2)) > epsilon
+v = x0;
+vold = v;
+while norm(v - vold, 1) < 1
 	i = i + 1
+
+	% Encode the equalities into a matrix Aeq
+	Aeq = sparse(create_Aeq(P));
+	% Encode the inequalities
+	Ain = sparse(create_Ain(P));
+
+	% Save the last v
+	vold = v;
 	% This gets the optimal v.
 	v = fmincon(...
 		... % @cdr_obj_fun is the objective function from the paper
@@ -46,14 +52,14 @@ while max(P(:, 2)) > epsilon
 		... % The lower bound for the velocity of P(1) and P(2) is zero. Add a lower
 		... %   bound for the y velocity of P(3) to the smallest positive number matlab
 		... %   can represent to avoid the zero vector as a solution.
-		[fix; 0; realmin], ...
+		[fix; realmin], ...
 		... % The upper bound for the velocities of P(1) and P(2) is zero to fix them
 		fix, ...
 		... % donothing is a function that does nothing because we have no nonlinear
 		... %   constraints, but must still provde something to the optimizer
 		donothing, ...
 		... % Our options, as above
-		options)
+		options);
 
 	% Update all the points based on the optimal velocities
 	for j = 1 : m
@@ -97,8 +103,8 @@ end
 
 % Return empty matrices
 function [c, ceq] = donothing(x)
-	c = []
-	ceq = []
+	c = [];
+	ceq = [];
 end
 
 function Aeq = create_Aeq(P)
