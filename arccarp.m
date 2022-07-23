@@ -1,14 +1,33 @@
-% Generate the spiral
+% CONSTANTS
+% The space between spiral arms
 epsilon = 1/4;
-P = spiral(epsilon)
+% The distance to step with the velocity in each iteration
+stepsize = 10^-3;
+% E.g. (a, b +/- resolution) is considered (a, b)
+resolution = stepsize;
+% Estimated ticks needed, used for preallocation
+ticks = 500;
 
-% m is the number of points, n = 2
-[m n] = size(P);
+% Generate the spiral
+%P = spiral(epsilon)
+L = spiral_length(P);
 
-% Start the optimization at the zero vector, height 2*n because each point has x and y velocity
-x0 = zeros(2 * size(P, 1), 1)
+% Clear the figure
+%clf;
+% Set the axis
+ax = ([-epsilon, sum(L) + epsilon, -epsilon, sum(L) + epsilon]);
+% Create new frames cell array
+gif_filename = "spiral " + datestr(datetime, 31) + ".gif";
+%draw(P, 0, ax);
+
+% Keep track of velocities of all iterations, and preallocate
+V = zeros(2 * size(P, 1), ticks);
+% Keep track of all P
+all_P = {};
+
 % Set the lower and upper bound of P(1,:) and P(2,:) to 0
 fix = [0 0 0 0]';
+% HOW TO PIN OTHER EDGES EASILY
 % Set some options:
 % - Feasibility mode helps it find a solution
 % - Increase max function evaluations and iterations because it has a hard time
@@ -18,23 +37,23 @@ options = optimoptions(@fmincon, ...
 	"EnableFeasibilityMode", true, ...
 	"MaxFunctionEvaluations", 100000, ...
 	"MaxIterations", 10000, ...
-	"UseParallel", true);
+	"UseParallel", false);
 
 % Run the optimizer while the largest y-coord of any point is greater than
 % epsilon. My hope was that after that it would be mostly straight.
-i = 0
-v = x0;
-vold = v;
-while norm(v - vold, 1) < 1
+i = 0;
+q = 2;
+while size(P, 1) > 2 % P(end,2) > 0.1 % norm(v - vold, 1) < 1
 	i = i + 1
 
+    % Start the optimization at the zero vector, height 2*n because each point has x and y velocity
+    x0 = zeros(2 * size(P, 1), 1);
 	% Encode the equalities into a matrix Aeq
 	Aeq = sparse(create_Aeq(P));
 	% Encode the inequalities
-	Ain = sparse(create_Ain(P));
+	Ain = sparse(-1 * create_Ain(P));
+    bin = -1 * create_bin(P, resolution);
 
-	% Save the last v
-	vold = v;
 	% This gets the optimal v.
 	v = fmincon(...
 		... % @cdr_obj_fun is the objective function from the paper
@@ -43,35 +62,46 @@ while norm(v - vold, 1) < 1
 		x0, ...
 		... % Ain are our inequalies
 		Ain, ...
-		... % Our inequalities are all >= 0
-		zeros(size(Ain, 1), 1), ...
+		... % Our inequalities
+		bin, ...
 		... % Aeq are our equalities
 		Aeq, ...
 		... % Our equaities are all = 0
 		zeros(size(Aeq, 1), 1), ...
-		... % The lower bound for the velocity of P(1) and P(2) is zero. Add a lower
-		... %   bound for the y velocity of P(3) to the smallest positive number matlab
-		... %   can represent to avoid the zero vector as a solution.
-		[fix; realmin], ...
+		... % The lower bound for the velocity of P(1) and P(2) is zero
+		fix, ...
 		... % The upper bound for the velocities of P(1) and P(2) is zero to fix them
 		fix, ...
 		... % donothing is a function that does nothing because we have no nonlinear
 		... %   constraints, but must still provde something to the optimizer
 		donothing, ...
 		... % Our options, as above
-		options);
+		options)
+    % Store V
+    V(1 : length(v), i) = v;
 
 	% Update all the points based on the optimal velocities
-	for j = 1 : m
+	for j = 1 : size(P, 1)
 		% The v(<stuff>) gets the velocity for P(j)
-		P(j, :) = P(j, :) + v(2 * j - 1 : 2 * j)';
-	end
+		P(j, :) = P(j, :) + stepsize * v(2 * j - 1 : 2 * j)';
+    end
+
+    % Remove the bar stretching
+    P = fix_lengths(P, L);
+
+    % Check for colinear bars
+    [P, L] = remove_colinear_bars(P, L, resolution);
+
+	% Save this P
+    all_P{i} = P;
+	P
 
 	% Draw this iteration
-	draw(P, i);
+	% draw(P, i, ax);
 end
-% Save the figure as a png
-print("spiral " + datestr(datetime, 31), "-dpng")
+
+%export_gif(gif_filename, all_P, i);
+gif_filename
 
 % The objective function
 function C = cdr_obj_fun(v)
@@ -88,17 +118,21 @@ function C = cdr_obj_fun(v)
 		for j = i + 2 : m
 			% Any reason the i,j switch order in the norm in the paper?
 			C = C + 1 / ...
-				((P(i, :) - P(j, :)) * (v(i : i + 1) - v(j : j + 1)) - norm(P(i, :) - P(j, :)));
+				( (P(i, :) - P(j, :)) * (v(i : i + 1) - v(j : j + 1)) ...
+                    - norm(P(i, :) - P(j, :)) );
 		end
 	end
 end
 
 % Draw the polygon, change colors each time
 function draw(P, i)
+	% Cycle through the colors
     colors = ["r" "g" "b" "c" "m" "y"];
     color = colors(1 + mod(i, length(colors)));
-    hold on;
+	% Don't show the plots as they are drawn
+	% Plot the arc, "-" connects the vertices, "o" puts a circle at the vertices
     plot(P(:, 1), P(:, 2), "-o" + color);
+	title("i = " + num2str(i));
 end
 
 % Return empty matrices
@@ -132,14 +166,81 @@ function Ain = create_Ain(P)
 	% Encode the inequality between i and all vertices larger than it
 	for i = 1 : m - 2
 		for j = i + 2 : m
-			Ain(end + 1, 1 : 2*m) = [...
+            x = [...
 				zeros(1, 2 * (i - 1)), ...
 				P(i, 1) - P(j, 1), ...
 				P(i, 2) - P(j, 2), ...
+                zeros(1, 2 * (j - i - 1)), ...
 				P(j, 1) - P(i, 1), ...
 				P(j, 2) - P(i, 2), ...
-				zeros(1, 2*m - 2 * (i - 1) - 4) ...
+				zeros(1, 2*m - 2 * (i - 1) - 2 * (j - i - 1) - 4) ...
 			];
+			Ain(end + 1, 1 : 2*m) = x;
 		end
 	end
+end
+
+function bin = create_bin(P, resolution)
+    m = size(P, 1);
+    bin = [];
+
+    for i = 1 : m - 2
+		for j = i + 2 : m
+			bin(end + 1) = norm(P(i, :) - P(j, :)) + resolution;
+		end
+	end
+end
+
+function L = spiral_length(P)
+    L = zeros(size(P, 1), 1);
+
+    for i = 2 : size(P, 1)
+        L(i - 1) = norm(P(i - 1, :) - P(i, :), 1);
+    end
+end
+
+function P = fix_lengths(P, L)
+    m = size(P, 1);
+    for i = 3 : m
+        % v is the vector representing the bar from i-1 to i
+        v = P(i, :) - P(i - 1, :);
+        % w is v scaled to the length it should be without erros
+        w = (L(i - 1) / norm(v)) * v;
+        % delta is the difference between the two
+        delta = w - v;
+        % Translate all the vertices after and including i of curve by
+        % delta
+        P(i : end, :) = P(i : end, :) + delta;
+    end
+end
+
+function [P, L] = remove_colinear_bars(P, L, resolution)
+    i = 2;
+    while i < size(P, 1)
+        % v is the vector representing the bar from i-1 to i
+        v = P(i, :) - P(i - 1, :);
+        % w is the vector representing the bar from i to i+1
+        w = P(i + 1, :) - P(i, :);
+
+        if abs(-v*w' + norm(v) * norm(w)) < resolution
+            % Remove the ith row of P to remove the ith vertex
+            P = remove_ith_row(P, i);
+
+            % Update the lengths
+            L(i - 1) = L(i - 1) + L(i);
+            L = remove_ith_row(L, i);
+
+            % Remove the bar stretching
+            P = fix_lengths(P, L);
+        else
+            i = i + 1;
+        end
+    end
+end
+
+function A = remove_ith_row(A, i)
+    % Remove the ith row of A
+    tail = A(i + 1 : end, :);
+    A = A(1 : i - 1, :);
+    A(i : i + size(tail, 1) - 1, :) = tail;
 end
