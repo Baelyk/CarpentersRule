@@ -1,18 +1,25 @@
 function export_gif(filename, positions, count)
 	fps = 15;
 	padding = 0.25;
+    h_res = 200;
+    
 
 	% Get max and min coordinates
-	max_coord = 0;
+	max_coords = [-Inf -Inf];
 	for j = 1 : count
-		max_coord = max([max_coord; max(positions{j}(:))]);
+		max_coords = max([max_coords; max(positions{j})]);
 	end
-	min_coord = 0;
+	min_coords = [Inf Inf];
 	for j = 1 : count
-		min_coord = min([min_coord; min(positions{j}(:))]);
-	end
+		min_coords = min([min_coords; min(positions{j})]);
+    end
+    
+    % Create figure with proper aspect ratio
+    aspect_ratio = abs((max_coords(1) - min_coords(1)) ...
+        / (max_coords(2) - min_coords(2)));
+    v_res = h_res * aspect_ratio;
 
-	fig = figure("Position", [0 0 280 210], "Resize", false);
+	fig = figure("Position", [0 0 v_res h_res], "Resize", false);
 	for j = 1 : count
 		fprintf("\r%4u/%4u", j, count);
 
@@ -21,7 +28,8 @@ function export_gif(filename, positions, count)
 		plot(P(:, 1), P(:, 2), "-o");
 		title("i = " + num2str(j));
 		% Set the axis
-		axis([min_coord max_coord min_coord max_coord] + padding * [-1 1 -1 1]);
+		axis([min_coords(1) max_coords(1) min_coords(2) max_coords(2)] ...
+            + padding * [-1 1 -1 1]);
 
 		% Capture the figure as a frame and converting it to the image data
 		% `imwrite` needs

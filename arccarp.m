@@ -2,15 +2,16 @@
 % The space between spiral arms
 epsilon = 1/4;
 % The distance to step with the velocity in each iteration
-stepsize = 10^-3;
+stepsize = 10^-4;
 % E.g. (a, b +/- resolution) is considered (a, b)
 resolution = stepsize;
 % Estimated ticks needed, used for preallocation
 ticks = 500;
 
 % Generate the spiral
-%P = spiral(epsilon)
+P = spiral(epsilon)
 L = spiral_length(P);
+ignored = repmat(false, size(P, 1), 1);
 
 % Clear the figure
 %clf;
@@ -80,20 +81,17 @@ while size(P, 1) > 2 % P(end,2) > 0.1 % norm(v - vold, 1) < 1
     % Store V
     V(1 : length(v), i) = v;
 
-	% Update all the points based on the optimal velocities
-	for j = 1 : size(P, 1)
-		% The v(<stuff>) gets the velocity for P(j)
-		P(j, :) = P(j, :) + stepsize * v(2 * j - 1 : 2 * j)';
-    end
+	v = stepsize * v;
+	[P P_ignored] = update_positions(P, v, ignored, L);
 
     % Remove the bar stretching
-    P = fix_lengths(P, L);
+    P = fix_lengths(P, L, ignored);
 
     % Check for colinear bars
-    [P, L] = remove_colinear_bars(P, L, resolution);
+    [P, L, ignored] = remove_colinear_bars(P, L, ignored, resolution);
 
 	% Save this P
-    all_P{i} = P;
+    all_P{i} = P_ignored;
 	P
 
 	% Draw this iteration
@@ -199,22 +197,35 @@ function L = spiral_length(P)
     end
 end
 
-function P = fix_lengths(P, L)
-    m = size(P, 1);
-    for i = 3 : m
+function P = fix_lengths(P, L, ignored)
+    for i = 3 : length(ignored)
+		if ignored(i)
+			continue
+		end
+		offset = sum(ignored(1 : i));
+
         % v is the vector representing the bar from i-1 to i
-        v = P(i, :) - P(i - 1, :);
+		P
+		i
+		offset
+        v = P(i - offset, :) - P(i - offset - 1, :);
+		new_length = L(i - 1);
+		j = i - 1;
+		while ignored(j)
+			new_length = new_length + L(j - 1)
+			j = j - 1
+		end
         % w is v scaled to the length it should be without erros
-        w = (L(i - 1) / norm(v)) * v;
+        w = (new_length / norm(v)) * v;
         % delta is the difference between the two
         delta = w - v;
         % Translate all the vertices after and including i of curve by
         % delta
-        P(i : end, :) = P(i : end, :) + delta;
+        P(i - offset : end, :) = P(i - offset : end, :) + delta;
     end
 end
 
-function [P, L] = remove_colinear_bars(P, L, resolution)
+function [P, L, ignored] = remove_colinear_bars(P, L, ignored, resolution)
     i = 2;
     while i < size(P, 1)
         % v is the vector representing the bar from i-1 to i
@@ -223,15 +234,15 @@ function [P, L] = remove_colinear_bars(P, L, resolution)
         w = P(i + 1, :) - P(i, :);
 
         if abs(-v*w' + norm(v) * norm(w)) < resolution
+			% Note that we are ignoring i
+			unignored = find(ignored == 0);
+			ignored(unignored(i)) = true;
+
             % Remove the ith row of P to remove the ith vertex
             P = remove_ith_row(P, i);
 
-            % Update the lengths
-            L(i - 1) = L(i - 1) + L(i);
-            L = remove_ith_row(L, i);
-
             % Remove the bar stretching
-            P = fix_lengths(P, L);
+            P = fix_lengths(P, L, ignored);
         else
             i = i + 1;
         end
@@ -243,4 +254,23 @@ function A = remove_ith_row(A, i)
     tail = A(i + 1 : end, :);
     A = A(1 : i - 1, :);
     A(i : i + size(tail, 1) - 1, :) = tail;
+end
+
+function [pos pos_all] = update_positions(pos, vel, ignored, lengths)
+	% Update non-ignored positions
+	vel = reshape(vel, 2, [])'
+	pos = pos + vel
+
+	pos_all = [];
+	for i = 1 : length(ignored)
+		offset = sum(ignored(1 : i));
+		if ignored(i)
+			v = pos(i + 1 - offset, :) - pos_all(i - 1, :);
+
+			delta = (lengths(i - 1) / norm(v)) * v;
+			pos_all(i, :) = pos_all(i - 1, :) + delta;
+		else
+			pos_all(i, :) = pos(i - offset, :)
+		end
+	end
 end
