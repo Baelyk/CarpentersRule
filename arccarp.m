@@ -2,14 +2,23 @@
 % The space between spiral arms
 epsilon = 1/4;
 % The distance to step with the velocity in each iteration
-stepsize = 10^-4;
+stepsize = 10^-3;
 % E.g. (a, b +/- resolution) is considered (a, b)
 resolution = stepsize;
 % Estimated ticks needed, used for preallocation
 ticks = 500;
+% Whether P is a polygon
+is_polygon = false;
 
 % Generate the spiral
-P = spiral(epsilon)
+%P = spiral(epsilon)
+% Keep track of all P
+all_P = {};
+% P is a polygon if the first and last point is the same
+if P(1, :) == P(end, :)
+	is_polygon = true;
+	P = P(1 : end - 1, :);
+end
 L = spiral_length(P);
 ignored = repmat(false, size(P, 1), 1);
 
@@ -23,8 +32,6 @@ gif_filename = "spiral " + datestr(datetime, 31) + ".gif";
 
 % Keep track of velocities of all iterations, and preallocate
 V = zeros(2 * size(P, 1), ticks);
-% Keep track of all P
-all_P = {};
 
 % Set the lower and upper bound of P(1,:) and P(2,:) to 0
 fix = [0 0 0 0]';
@@ -36,27 +43,25 @@ fix = [0 0 0 0]';
 % - Run the optimizer in parallel to use more cores
 options = optimoptions(@fmincon, ...
 	"EnableFeasibilityMode", true, ...
-	"MaxFunctionEvaluations", 100000, ...
-	"MaxIterations", 10000, ...
 	"UseParallel", false);
 
 % Run the optimizer while the largest y-coord of any point is greater than
 % epsilon. My hope was that after that it would be mostly straight.
 i = 0;
 q = 2;
-while size(P, 1) > 2 % P(end,2) > 0.1 % norm(v - vold, 1) < 1
+while not_done(P, is_polygon)
 	i = i + 1
 
     % Start the optimization at the zero vector, height 2*n because each point has x and y velocity
     x0 = zeros(2 * size(P, 1), 1);
 	% Encode the equalities into a matrix Aeq
-	Aeq = sparse(create_Aeq(P));
+	Aeq = sparse(create_Aeq(P, is_polygon));
 	% Encode the inequalities
-	Ain = sparse(-1 * create_Ain(P));
-    bin = -1 * create_bin(P, resolution);
+	Ain = sparse(-1 * create_Ain(P, is_polygon));
+    bin = -1 * create_bin(P, is_polygon, resolution);
 
 	% This gets the optimal v.
-	v = fmincon(...
+	[v fval exitflag output] = fmincon(...
 		... % @cdr_obj_fun is the objective function from the paper
 		@cdr_obj_fun, ...
 		... % x0 is our initial point, always 0
@@ -88,14 +93,23 @@ while size(P, 1) > 2 % P(end,2) > 0.1 % norm(v - vold, 1) < 1
     P = fix_lengths(P, L, ignored);
 
     % Check for colinear bars
-    [P, L, ignored] = remove_colinear_bars(P, L, ignored, resolution);
+    [P, L, ignored] = remove_colinear_bars(P, L, ignored, is_polygon, resolution);
 
 	% Save this P
+	if is_polygon
+		% Add first to end if a polygon
+		P_ignored(end + 1, :) = P_ignored(1, :)
+	end
     all_P{i} = P_ignored;
 	P
 
 	% Draw this iteration
 	% draw(P, i, ax);
+
+	% If converged to an infeasible point, stop
+	if exitflag == -2
+		break
+	end
 end
 
 %export_gif(gif_filename, all_P, i);
@@ -139,7 +153,7 @@ function [c, ceq] = donothing(x)
 	ceq = [];
 end
 
-function Aeq = create_Aeq(P)
+function Aeq = create_Aeq(P, is_polygon)
 	[m n] = size(P);
 	Aeq = [];
 
@@ -155,15 +169,32 @@ function Aeq = create_Aeq(P)
 			zeros(1, 2*m - 2 * (i - 1) - 4) ...
 		];
 	end
+	% If this is a polygon, connect the last point to the first
+	if is_polygon
+		i = m;
+		j = 1;
+		Aeq(end + 1, 1 : 2*m) = [...
+			P(j, 1) - P(i, 1), ...
+			P(j, 2) - P(i, 2), ...
+			zeros(1, 2 * m - 4), ...
+			P(i, 1) - P(j, 1), ...
+			P(i, 2) - P(j, 2), ...
+		];
+	end
 end
 
-function Ain = create_Ain(P)
+function Ain = create_Ain(P, is_polygon)
 	[m n] = size(P);
 	Ain = [];
 
 	% Encode the inequality between i and all vertices larger than it
 	for i = 1 : m - 2
 		for j = i + 2 : m
+			% If polygon, the first and last are actually connected, so skip
+			if i == 1 && is_polygon && j == m
+				continue
+			end
+
             x = [...
 				zeros(1, 2 * (i - 1)), ...
 				P(i, 1) - P(j, 1), ...
@@ -178,12 +209,17 @@ function Ain = create_Ain(P)
 	end
 end
 
-function bin = create_bin(P, resolution)
+function bin = create_bin(P, is_polygon, resolution)
     m = size(P, 1);
     bin = [];
 
     for i = 1 : m - 2
 		for j = i + 2 : m
+			% If polygon, the first and last are actually connected, so skip
+			if i == 1 && is_polygon && j == m
+				continue
+			end
+
 			bin(end + 1) = norm(P(i, :) - P(j, :)) + resolution;
 		end
 	end
@@ -198,6 +234,7 @@ function L = spiral_length(P)
 end
 
 function P = fix_lengths(P, L, ignored)
+	return
     for i = 3 : length(ignored)
 		if ignored(i)
 			continue
@@ -205,15 +242,12 @@ function P = fix_lengths(P, L, ignored)
 		offset = sum(ignored(1 : i));
 
         % v is the vector representing the bar from i-1 to i
-		P
-		i
-		offset
         v = P(i - offset, :) - P(i - offset - 1, :);
 		new_length = L(i - 1);
 		j = i - 1;
 		while ignored(j)
-			new_length = new_length + L(j - 1)
-			j = j - 1
+			new_length = new_length + L(j - 1);
+			j = j - 1;
 		end
         % w is v scaled to the length it should be without erros
         w = (new_length / norm(v)) * v;
@@ -225,7 +259,7 @@ function P = fix_lengths(P, L, ignored)
     end
 end
 
-function [P, L, ignored] = remove_colinear_bars(P, L, ignored, resolution)
+function [P, L, ignored] = remove_colinear_bars(P, L, ignored, is_polygon, resolution)
     i = 2;
     while i < size(P, 1)
         % v is the vector representing the bar from i-1 to i
@@ -247,6 +281,27 @@ function [P, L, ignored] = remove_colinear_bars(P, L, ignored, resolution)
             i = i + 1;
         end
     end
+
+	% Only check the last-first connection if a polygon
+	if is_polygon
+		m = size(P, 1);
+        % v is the vector representing the bar from m-1 to m
+        v = P(m, :) - P(m - 1, :);
+        % w is the vector representing the bar from m to 1
+        w = P(1, :) - P(m, :);
+
+        if abs(-v*w' + norm(v) * norm(w)) < resolution
+			% Note that we are ignoring i
+			unignored = find(ignored == 0);
+			ignored(unignored(end)) = true;
+
+            % Remove the ith row of P to remove the ith vertex
+            P = remove_ith_row(P, m);
+
+            % Remove the bar stretching
+            P = fix_lengths(P, L, ignored);
+        end
+	end
 end
 
 function A = remove_ith_row(A, i)
@@ -258,19 +313,35 @@ end
 
 function [pos pos_all] = update_positions(pos, vel, ignored, lengths)
 	% Update non-ignored positions
-	vel = reshape(vel, 2, [])'
-	pos = pos + vel
+	vel = reshape(vel, 2, [])';
+	pos = pos + vel;
 
 	pos_all = [];
 	for i = 1 : length(ignored)
 		offset = sum(ignored(1 : i));
 		if ignored(i)
-			v = pos(i + 1 - offset, :) - pos_all(i - 1, :);
+			% If i is an "end"
+			if i > max(find(ignored == 0))
+				v = pos(1, :) - pos_all(i - 1, :);
 
-			delta = (lengths(i - 1) / norm(v)) * v;
-			pos_all(i, :) = pos_all(i - 1, :) + delta;
+				delta = (lengths(i - 1) / norm(v)) * v;
+				pos_all(i, :) = pos_all(i - 1, :) + delta;
+			else
+				v = pos(i + 1 - offset, :) - pos_all(i - 1, :);
+
+				delta = (lengths(i - 1) / norm(v)) * v;
+				pos_all(i, :) = pos_all(i - 1, :) + delta;
+			end
 		else
-			pos_all(i, :) = pos(i - offset, :)
+			pos_all(i, :) = pos(i - offset, :);
 		end
+	end
+end
+
+function should_continue = not_done(pos, is_polygon)
+	if is_polygon
+		should_continue = length(convhull(pos)) - 1 ~= length(pos);
+	else
+		should_continue = length(pos) > 2;
 	end
 end
