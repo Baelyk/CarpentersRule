@@ -15,6 +15,7 @@ function [polygons, speeds, chordarcs] = speedlimit(num)
 	end
 
 	output = [speeds chordarcs];
-	filename = "speeds_" + datestr(datetime, 30) + ".csv"
-	writematrix(output, filename);
+	timestamp = datestr(datetime, 30)
+	writematrix(output, "speeds_" + timestamp + ".csv");
+	writecell(polygons, "polygons_" + timestamp + ".csv");
 end
