@@ -2,7 +2,6 @@ function export_gif(filename, positions, count)
 	fps = 15;
 	padding = 0.25;
     h_res = 200;
-    
 
 	% Get max and min coordinates
 	max_coords = [-Inf -Inf];
@@ -13,7 +12,7 @@ function export_gif(filename, positions, count)
 	for j = 1 : count
 		min_coords = min([min_coords; min(positions{j})]);
     end
-    
+
     % Create figure with proper aspect ratio
     aspect_ratio = abs((max_coords(1) - min_coords(1)) ...
         / (max_coords(2) - min_coords(2)));
