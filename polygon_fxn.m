@@ -1,12 +1,12 @@
 function P = polygon_fxn(n)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
-    points = rand(n,2); % choosing random points
+    points = randi([0, 10], n,2); % choosing random points
 
     for  i = 1:n-1
         for j = i+1:n
             while points(i,:) == points(j,:) % update points if two are the same
-                points(j,:) = rand(1,2);
+                points(j,:) = randi([0, 10], 1,2);
             end
         end
     end
