@@ -5,25 +5,24 @@ function P = spiral(epsilon)
 		0 1;
 		0 epsilon];
 
-	while true
-        if P(end - 2, 1) - P(end - 1, 1) < 2 * epsilon
-			break
-		end
-		P(end + 1, :) = P(end - 3, :) + [-1, 1] * epsilon;
+	points = 2 + 2 / epsilon - 5;
 
-		if P(end - 2, 2) - P(end - 1, 2) < 2 * epsilon
-			break
+	for i = 1 : points
+		point = mod(i, 4);
+        if point == 1
+			P(end + 1, :) = P(end - 3, :) + [-1, 1] * epsilon;
 		end
-		P(end + 1, :) = P(end - 3, :) + [-1, -1] * epsilon;
 
-		if P(end, 1) - P(end - 2, 1) < 2 * epsilon
-			break
+        if point == 2
+			P(end + 1, :) = P(end - 3, :) + [-1, -1] * epsilon;
 		end
-		P(end + 1, :) = P(end - 3, :) + [1, -1] * epsilon;
 
-		if P(end, 2) - P(end - 2, 2) < 2 * epsilon
-			break
+        if point == 3
+			P(end + 1, :) = P(end - 3, :) + [1, -1] * epsilon;
 		end
-		P(end + 1, :) = P(end - 3, :) + [1, 1] * epsilon;
+
+        if point == 0
+			P(end + 1, :) = P(end - 3, :) + [1, 1] * epsilon;
+		end
     end
 end
