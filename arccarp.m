@@ -43,9 +43,9 @@ fix = [0 0 0 0]';
 % - Run the optimizer in parallel to use more cores
 options = optimoptions(@fmincon, ...
 	"EnableFeasibilityMode", true, ...
-	"MaxIterations", 6e5, ...
-	"MaxFunctionEvaluations", 6e5, ...
-	"Display", "iter", ...
+	"MaxIterations", 6e4, ...
+	"MaxFunctionEvaluations", 6e4, ...
+	"Display", "none", ...
 	"UseParallel", false);
 
 % Run the optimizer while the largest y-coord of any point is greater than
@@ -58,11 +58,23 @@ while not_done(P, is_polygon)
     % Start the optimization at the zero vector, height 2*n because each point has x and y velocity
     %x0 = zeros(2 * size(P, 1), 1);
 	% Encode the equalities into a matrix Aeq
-	Aeq = sparse(create_Aeq(P, is_polygon));
+	Aeq = create_Aeq(P, is_polygon);
 	% Encode the inequalities
-	Ain = sparse(-1 * create_Ain(P, is_polygon));
+	Ain = -1 * create_Ain(P, is_polygon);
     bin = -1 * create_bin(P, is_polygon, resolution);
-	x0 = linprog(zeros(2 * size(P, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"));
+	lb = repmat(-Inf, 2 * size(P, 1), 1);
+	ub = repmat(Inf, 2 * size(P, 1), 1);
+	lb(end - 3 : end) = 0
+	ub(end - 3 : end) = 0
+	x0 = linprog(zeros(2 * size(P, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"))
+
+		A = eye(4);
+		A(end + 1 : end + size(Aeq, 1), 1 : size(Aeq, 2)) = Aeq;
+		[m, n] = size(Ain);
+		A(end + 1 : end + m, 1 : n + m) = [Ain eye(m)];
+		b = [zeros(4 + size(Aeq, 1), 1); bin(:)];
+
+		B = rref([A b]);
 
 	% This gets the optimal v.
 	[v fval exitflag output] = fmincon(...
@@ -111,7 +123,7 @@ while not_done(P, is_polygon)
 	% draw(P, i, ax);
 
 	% If converged to an infeasible point, stop
-	if exitflag ~= 1 && exitflag ~= 0
+	if exitflag < 0
 		break
 	end
 end
