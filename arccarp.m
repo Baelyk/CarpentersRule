@@ -43,6 +43,9 @@ fix = [0 0 0 0]';
 % - Run the optimizer in parallel to use more cores
 options = optimoptions(@fmincon, ...
 	"EnableFeasibilityMode", true, ...
+	"MaxIterations", 6e5, ...
+	"MaxFunctionEvaluations", 6e5, ...
+	"Display", "iter", ...
 	"UseParallel", false);
 
 % Run the optimizer while the largest y-coord of any point is greater than
@@ -53,12 +56,13 @@ while not_done(P, is_polygon)
 	i = i + 1
 
     % Start the optimization at the zero vector, height 2*n because each point has x and y velocity
-    x0 = zeros(2 * size(P, 1), 1);
+    %x0 = zeros(2 * size(P, 1), 1);
 	% Encode the equalities into a matrix Aeq
 	Aeq = sparse(create_Aeq(P, is_polygon));
 	% Encode the inequalities
 	Ain = sparse(-1 * create_Ain(P, is_polygon));
     bin = -1 * create_bin(P, is_polygon, resolution);
+	x0 = linprog(zeros(2 * size(P, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"));
 
 	% This gets the optimal v.
 	[v fval exitflag output] = fmincon(...
@@ -107,7 +111,7 @@ while not_done(P, is_polygon)
 	% draw(P, i, ax);
 
 	% If converged to an infeasible point, stop
-	if exitflag == -2
+	if exitflag ~= 1 && exitflag ~= 0
 		break
 	end
 end
@@ -130,7 +134,7 @@ function C = cdr_obj_fun(v)
 		for j = i + 2 : m
 			% Any reason the i,j switch order in the norm in the paper?
 			C = C + 1 / ...
-				( (P(i, :) - P(j, :)) * (v(i : i + 1) - v(j : j + 1)) ...
+				( (P(i, :) - P(j, :)) * (v(2 * i - 1 : 2 * i) - v(2 * j - 1 : 2 * j)) ...
                     - norm(P(i, :) - P(j, :)) );
 		end
 	end
@@ -234,7 +238,6 @@ function L = spiral_length(P)
 end
 
 function P = fix_lengths(P, L, ignored)
-	return
     for i = 3 : length(ignored)
 		if ignored(i)
 			continue

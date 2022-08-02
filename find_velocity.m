@@ -1,17 +1,17 @@
 function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
 		% Encode the equalities into a matrix Aeq
-		Aeq = sparse(create_Aeq(polygon, is_polygon));
+		Aeq = create_Aeq(polygon, is_polygon)
 		%cond(Aeq)
 		% Encode the inequalities
-		Ain = sparse(-1 * create_Ain(polygon, is_polygon));
+		Ain = -1 * create_Ain(polygon, is_polygon)
 		%cond(Ain)
-		bin = create_bin(-1 * polygon, is_polygon, resolution);
+		bin = -1 * create_bin(polygon, is_polygon, resolution)
 		% Set the lower and upper bound of P(1,:) and P(2,:) to 0
 		fix = [0 0 0 0]';
 		% Start the optimization at the zero vector, height 2*n because each point has x and y velocity
 		%x0 = zeros(2 * size(polygon, 1), 1);
 		% Start at a feasible solution
-		x0 = linprog(zeros(2 * size(polygon, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "none"));
+		x0 = linprog(zeros(2 * size(polygon, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"));
 		% HOW TO PIN OTHER EDGES EASILY
 		% Set some options:
 		% - Feasibility mode helps it find a solution
@@ -22,7 +22,7 @@ function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
 			"EnableFeasibilityMode", true, ...
 			"MaxFunctionEvaluations", 10e4, ...
 			"MaxIterations", 10e4, ...
-			"Display", "none", ...
+			"Display", "iter", ...
 			"UseParallel", false);
 
 		% This gets the optimal v.
@@ -55,6 +55,9 @@ end
 function Aeq = create_Aeq(P, is_polygon)
 	[m n] = size(P);
 	Aeq = [];
+
+	% Fix first and second vertices
+	%Aeq = eye(4);
 
 	% Connect each point to the next one, ignoring the first and last.
 	for i = 1 : m - 1
@@ -132,20 +135,25 @@ end
 
 % The objective function
 function C = cdr_obj_fun(v, P)
+	v
+	P
 	% m is the number of points
 	m = size(P, 1);
+	C = [];
 
 	% The first sum can just be written like this
-	C = norm(v)^2;
+	C(end + 1) = norm(v)^2;
 
 	% This is the second sum
 	for i = 1 : m - 2
 		for j = i + 2 : m
 			% Any reason the i,j switch order in the norm in the paper?
-			C = C + 1 / ...
-				( (P(i, :) - P(j, :)) * (v(i : i + 1) - v(j : j + 1)) ...
+			C(end + 1) = 1 / ...
+				( (P(i, :) - P(j, :)) * (v(2 * i - 1 : 2 * i) - v(2 * j - 1 : 2 * j)) ...
                     - norm(P(i, :) - P(j, :)) );
 		end
 	end
+	C
+	C = sum(C);
 end
 
