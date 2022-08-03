@@ -1,17 +1,25 @@
 function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
 		% Encode the equalities into a matrix Aeq
-		Aeq = create_Aeq(polygon, is_polygon)
-		%cond(Aeq)
+		Aeq = create_Aeq(polygon, is_polygon);
+		beq = zeros(size(Aeq, 1), 1);
+		cond(Aeq)
 		% Encode the inequalities
-		Ain = -1 * create_Ain(polygon, is_polygon)
-		%cond(Ain)
-		bin = -1 * create_bin(polygon, is_polygon, resolution)
+		Ain = -1 * create_Ain(polygon, is_polygon);
+		cond(Ain)
+		bin = -1 * create_bin(polygon, is_polygon, resolution);
 		% Set the lower and upper bound of P(1,:) and P(2,:) to 0
 		fix = [0 0 0 0]';
 		% Start the optimization at the zero vector, height 2*n because each point has x and y velocity
 		%x0 = zeros(2 * size(polygon, 1), 1);
 		% Start at a feasible solution
-		x0 = linprog(zeros(2 * size(polygon, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"));
+		size(Aeq)
+		rank(Aeq)
+		rank([Aeq zeros(size(Aeq, 1), 1)])
+		size(Ain)
+		rank(Ain)
+		rank([Ain bin(:)])
+		f = zeros(2 * size(polygon, 1), 1);
+		[x0, fval, exitflag, output, lambda] = linprog(f, Ain, bin, Aeq, beq, fix, fix, optimoptions("linprog", "Display", "iter", "Preprocess", "basic", "Diagnostics", "on", "MaxIterations", 1e4))
 		% HOW TO PIN OTHER EDGES EASILY
 		% Set some options:
 		% - Feasibility mode helps it find a solution
@@ -135,8 +143,8 @@ end
 
 % The objective function
 function C = cdr_obj_fun(v, P)
-	v
-	P
+	v;
+	P;
 	% m is the number of points
 	m = size(P, 1);
 	C = [];
@@ -153,7 +161,7 @@ function C = cdr_obj_fun(v, P)
                     - norm(P(i, :) - P(j, :)) );
 		end
 	end
-	C
+	C;
 	C = sum(C);
 end
 
