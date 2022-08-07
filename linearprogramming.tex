@@ -93,7 +93,7 @@ When defining a linear program in terms of $A, b, c$, we actually have two nicel
 programs, the primal problem and the dual problem. In standard form,
 \begin{align*}
 	\textbf{Primal: } & \min c^t x \quad \text{subject to } Ax = b,\ x \ge 0 \\
-	\textbf{Dual: } & \max b^t y \quad \text{subject to } A^t y \le c,\ y \ge 0
+	\textbf{Dual: } & \max b^t y \quad \text{subject to } A^t y \le c
 \end{align*}
 with $A$ an $m \times n$ matrix, $b, y \in \R^m$, and $c, x \in \R^n$. In particular, the
 optimal values of these two problems are equal, a property called Strong Duality.
@@ -228,17 +228,10 @@ and there exists no such $y$.
 		\begin{bmatrix} A \\ c^t \end{bmatrix} x = \begin{bmatrix} b \\ \gamma \end{bmatrix}
 		\text{.}
 	\]
-	This sets us up to use Farka's Lemma, but first we need to modify the matrix to help us later:
-	\[
-		\nexists \begin{bmatrix} x \\ 0 \end{bmatrix} \ge 0 \in \R^{n + n} \text{ such that }
-		\begin{bmatrix} A & -I_n \\ c^t & 0 \end{bmatrix} \begin{bmatrix} x \\ 0 \end{bmatrix}
-		= \begin{bmatrix} b \\ \gamma \end{bmatrix}
-		\text{.}
-	\]
 	Applying Farka's Lemma gives us that since the first case fails, the second must hold:
 	\[
 		\exists \begin{bmatrix} -y \\ \alpha \end{bmatrix} \in \R^{m + 1} \text{ such that }
-		\begin{bmatrix} A^t & c \\ -I_n & 0 \end{bmatrix} \begin{bmatrix} -y \\ \alpha \end{bmatrix} \ge 0
+		\begin{bmatrix} A^t & c \end{bmatrix} \begin{bmatrix} -y \\ \alpha \end{bmatrix} \ge 0
 		\text{ and }
 		\begin{bmatrix} b^t & \gamma \end{bmatrix}\begin{bmatrix} -y \\ \alpha \end{bmatrix} = -1
 		\text{.}
@@ -246,12 +239,11 @@ and there exists no such $y$.
 	The sign in $-y$ makes the end of the proof cleaner. To write this back out as constraints, we have
 	\begin{align*}
 		-A^t y + \alpha c &\ge 0 \\
-		y &\ge 0 \\
 		-b^t y + \alpha \gamma &= - 1
 	\end{align*}
 	We want to play with these constraints to show first that the dual is feasible, and then that its
 	optimal value must be equal to the primal's. To do this, we will need to remove the $\alpha$, and
-	we can do this by considering two case, $\alpha = 0$ and $\alpha \neq 0$.
+	we can do this by considering two cases, $\alpha = 0$ and $\alpha \neq 0$.
 
 	Suppose $\alpha = 0$. Then,
 	\begin{align*}
@@ -265,14 +257,12 @@ and there exists no such $y$.
 	out. To keep the notation clean, this means we can just assume $\alpha = 1$, and keep using $y$:
 	\begin{align*}
 		-A^t y + c &\ge 0 \\
-		y &\ge 0 \\
 		-b^t y + \gamma &\le 0
 	\end{align*}
 	That last equality is written as an inequality to remove the $\alpha^{-1}$ from the right. These
 	constraints can be rewritten, and here is why I used $-y$,
 	\begin{align*}
 		A^t y &\le c \\
-		y &\ge 0 \\
 		b^t y &\ge \gamma
 	\end{align*}
 	This means $y$ is feasible for the dual problem, so the optimal value of the dual is also bounded
