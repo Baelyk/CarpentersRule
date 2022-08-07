@@ -1,0 +1,296 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsfonts,fullpage,amsthm,amssymb}
+\usepackage{thmtools}
+\usepackage{enumitem}
+
+% Better matrices, namely augmented
+% https://tex.stackexchange.com/a/2244
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols{c}]{%
+	\hskip -\arraycolsep
+	\let\@ifnextchar\new@ifnextchar
+	\array{#1}}
+\makeatother
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{ifthen}
+% Code blocks
+\usepackage[outputdir=latex-build]{minted}
+
+\usepackage[table]{xcolor}
+
+% TikZ for Graphs
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{positioning, quotes}
+
+% Defining shortcut macros
+\newcommand\Z{\mathbb{Z}}
+\newcommand\R{{\mathbb{R}}}
+\newcommand\Q{{\mathbb{Q}}}
+\newcommand\C{{\mathbb{C}}}
+\newcommand\N{{\mathbb{N}}}
+\newcommand\F{{\mathcal{F}}}
+\newcommand\TR{{\operatorname{tr}}}
+% Replace \P make paragraph symbol with \P makes \mathcal{P} for power sets
+\renewcommand\P{{\mathcal{P}}}
+\newcommand{\then}{\Rightarrow}
+
+\DeclareMathOperator{\im}{Im}
+\DeclareMathOperator{\arccot}{arccot}
+
+\declaretheoremstyle[
+	spaceabove={1em plus 0.1em minus 0.2em},
+	notefont=\bfseries,
+	notebraces={}{},
+	headformat=\ifthenelse{\equal{\NOTE}{}}{\NAME{} \NUMBER}{\!\!\NOTE}
+]
+{thm}
+
+\declaretheorem{theorem}
+\declaretheorem[name=Farka's Lemma, numbered=unless unique]{farkas}
+
+\declaretheoremstyle[
+	spaceabove={1em plus 0.1em minus 0.2em},
+	notefont=\bfseries,
+	notebraces={}{},
+	headformat=\ifthenelse{\equal{\NOTE}{}}{\NAME{} \NUMBER}{\!\!\NOTE}
+]
+{problem}
+
+\declaretheorem{problem}[style=problem]
+
+\declaretheoremstyle[
+	headfont=\itshape,
+	bodyfont={
+			% spacing inbetween paragraphs (with rubber padding)
+			\parskip 0.3em plus 0.1em minus 0.2em
+			% disables paragraph indenting
+			\parindent 0pt
+			% no obnoxious space before lists
+			\setlist{nosep}
+			% indent description lists
+			\setlist[description]{labelindent=1.4em,labelwidth=!,format=\normalfont\itshape}
+		}
+]
+{solution}
+\declaretheorem{solution}[numbered=no, style=solution]
+
+\newcommand{\solpart}[1]{\par\textbf{#1}  }
+
+\title{Linear Programming}
+\author{George Ekman}
+
+\begin{document}
+\maketitle
+
+\section{The Dual of a Linear Program}
+
+When defining a linear program in terms of $A, b, c$, we actually have two nicely related linear
+programs, the primal problem and the dual problem. In standard form,
+\begin{align*}
+	\textbf{Primal: } & \min c^t x \quad \text{subject to } Ax = b,\ x \ge 0 \\
+	\textbf{Dual: } & \max b^t y \quad \text{subject to } A^t y \le c,\ y \ge 0
+\end{align*}
+with $A$ an $m \times n$ matrix, $b, y \in \R^m$, and $c, x \in \R^n$. In particular, the
+optimal values of these two problems are equal, a property called Strong Duality.
+
+Standard form has the primal constraints written as equalities, but a linear program with linear
+inequalities in either direction, or even no sign restrictions on $x$, can always be rewritten in
+standard form, and solutions and properties will be transferable between the forms. The dual can
+also be written as an equality, but it plays better in the coming proofs if it is an inequality.
+
+A linear program is \emph{feasible} if its region of feasibility is nonempty, so there exist
+vectors satisfying the constraints, and is \emph{unbounded} if its optimal value does not exist on
+the region of feasibility. A linear program with a solution is both feasible and bounded.
+
+\section{Farka's Lemma}
+
+\begin{theorem}
+	\label{thm:funlinalg}%
+	Either there exists $x$ such that $Ax = b$, or there exists $y$ such that $y^t A = 0$ and
+	$y^t b \neq 0$.
+\end{theorem}
+
+Farka's Lemma is a version of this theorem, but tailored for linear programming, providing a
+connection between the primal and dual problems, since $A^t y \ge 0 \iff y^t A \ge 0$.
+
+\begin{farkas}
+	Exactly one is true:
+	\begin{enumerate}
+		\item There exists $x \ge 0$ such that $Ax = b$
+		\item There exists $y$ such that $y^t A \ge 0$ and $y^t b = -1$.
+	\end{enumerate}
+\end{farkas}
+
+The first case means the program is feasible, with $x$ a feasible solution, and the second case
+means it is infeasible, with $y$ being the \emph{certificate of infeasibility}. Geometrically, $Ax$
+with $x \ge 0$ creates a positive cone $C$, which either contains $b$ (the first case), or we can
+find a hyperplane through the origin defined by $y$, where the cone is above the hyperplane but $b$
+is below it.
+
+Apart from the geometric meaning talking about feasibility of the primal problem, Farka's Lemma
+provides a way to convert statements about the primal into statements about the dual, which we will
+use in the proofs about duality.
+
+\begin{proof}
+	Suppose the first case holds, there exists an $x \ge 0$ such that $Ax = b$. For any $y$ such that
+	$y^t A \ge 0$, $y^t A x \ge 0$, which means $y^t b \neq -1$, and so the second case fails.
+
+	Suppose instead that the first case fails. If we define $C = \left\{ Ax : x \ge 0 \right\}$, this
+	means $b \not\in C$.
+
+	Now, we need to construct a $y$ that satisfies the second case. We will do this by find the closest
+	vector $w$ to $b$, considering the vector $z$ from $b$ to $w$ so that $y^t A \ge 0$ and $y^t b <
+		0$, and then rescaling it so $y^t b = -1$.
+
+	This set $C$ is closed and convex, so if we intersect it with $B = \{ x : \Vert b - x \Vert \le
+		\Vert b \Vert \}$, the closed ball of radius $\Vert b \Vert$ around $b$, we have a compact and
+	convex set $C \cap B$, nonempty since it contains at least $0$. Therefore, the strictly convex
+	$\Vert b - x \Vert$ has a unique minimizer $w \in C \cap B$, the closest vector in $C$ to $b$.
+
+	For any $v \in C$, $\lambda \in [0, 1]$, since $C$ is convex and $w$ is closest to $b$,
+	\begin{align*}
+		\Vert w - b \Vert^2 &\le \Vert (1 - \lambda)w + \lambda v - b \Vert^2 \\
+		&\le \Vert \lambda(v - w) + (w - b) \Vert^2 \\
+		&\le \lambda^2 \Vert v - w \Vert^2 + 2 \lambda \langle v - w, w - b \rangle + \Vert w - b \Vert^2 \\
+		0 &\le \lambda^2 \Vert v - w \Vert^2 + 2 \lambda \langle v - w, w - b \rangle
+	\end{align*}
+
+	Post image And so for small $\lambda$, $\langle v - w, w - b \rangle \ge 0$.
+
+	Define $z = w - b$, the vector from $b$ to $w$. This inequality now says $\langle v - w, z \rangle
+		\ge 0$, and when $v = 0$, it gives $\langle w, z \rangle \le 0$. Then, looking at $\langle b, z
+		\rangle$,
+	\begin{align*}
+		\langle b, z \rangle &= \langle b - w, z \rangle + \langle w, z \rangle \\
+		&= - \Vert z \Vert^2 + \langle w, z \rangle \\
+		&< 0
+	\end{align*}
+
+	For all $v \in C$, $\langle v - w, z \rangle \ge 0$ also means that $\langle v, z \rangle \ge
+		\langle w, z \rangle$, and with some $\gamma < 0$, we can combine our inequalities in a chain:
+	\[ \langle v, z \rangle \ge \langle w, z \rangle > \gamma > \langle b, z \rangle \text{.} \]
+
+	If we fix $v \in C$, then for all $\lambda > 0$, the chain gives $\langle \lambda v, z \rangle >
+		\gamma$, and so $\langle v, z \rangle > \gamma / \lambda$, and as $\lambda \to \infty$, $\gamma /
+		\lambda \to 0$, which means we can rewrite our chain with $\gamma = 0$,
+	\[ \langle v, z \rangle \ge 0 > \langle b, z \rangle \text{,} \]
+	Leaving us only to rescale by defining $y = \frac{z}{|\langle z, b \rangle|}$ so that
+	\[ \langle v, y \rangle \ge 0 > \langle b, y \rangle = -1 \text{.} \]
+	Which means $y^t A \ge 0$ and $y^t b = -1$.
+\end{proof}
+
+\section{Weak Duality}
+
+\begin{theorem}[Weak Duality]
+	If $x$ is feasible for the primal problem, and $y$ is feasible for the dual problem, then
+	$c^t x \ge y^t b$.
+
+	In particular, this means that if one is feasible, the other is bounded.
+\end{theorem}
+\begin{proof}
+	$c^t \ge y^t A$, so $c^t x \ge y^t A x \ge y^t b$.
+\end{proof}
+
+Modifying the constraints or changing between maximizing and minimizing will change the exact
+statement of Weak Duality (flipping inequalities), so it is useful to think about Weak Duality in
+the second way.
+
+For example, if the primal problem is feasible with $x$, the dual is bounded, since for any
+feasible $y$, $y^t b \le c^t x$. However, in this case, it could be that the dual is infeasible,
+and there exists no such $y$.
+
+\section{Strong Duality}
+
+\begin{theorem}[Strong Duality]
+	If both problems are feasible, then they have the same objective value: $c^tx_* = b^ty_*$, where
+	$x_*$ and $y_*$ are respectively the optimal primal and dual solutions.
+
+	\noindent
+	In addition, this means the primal is feasible and bounded if and only if the dual is feasible and
+	bounded.
+\end{theorem}
+\begin{proof}
+	Suppose both the primal and dual problems are feasible. Then, by Weak Duality, both problems are
+	bounded.
+
+	Since the primal problem is feasible and bounded, there exists an optimal solution $x_*$. Since
+	$x_*$ is optimal, this means there does not exist an $x \ge 0$ such that it satisfies the
+	constraints, $Ax = b$, and has a lesser optimal value, $c^tx < c^tx_*$. Using $\epsilon > 0$, this
+	inequality can be written as the equality $c^tx = c^tx_* - \epsilon = \gamma$. Then, writing this
+	as a linear program,
+	\[
+		\nexists x \ge 0 \in \R^n \text{ such that }
+		\begin{bmatrix} A \\ c^t \end{bmatrix} x = \begin{bmatrix} b \\ \gamma \end{bmatrix}
+		\text{.}
+	\]
+	This sets us up to use Farka's Lemma, but first we need to modify the matrix to help us later:
+	\[
+		\nexists \begin{bmatrix} x \\ 0 \end{bmatrix} \ge 0 \in \R^{n + n} \text{ such that }
+		\begin{bmatrix} A & -I_n \\ c^t & 0 \end{bmatrix} \begin{bmatrix} x \\ 0 \end{bmatrix}
+		= \begin{bmatrix} b \\ \gamma \end{bmatrix}
+		\text{.}
+	\]
+	Applying Farka's Lemma gives us that since the first case fails, the second must hold:
+	\[
+		\exists \begin{bmatrix} -y \\ \alpha \end{bmatrix} \in \R^{m + 1} \text{ such that }
+		\begin{bmatrix} A^t & c \\ -I_n & 0 \end{bmatrix} \begin{bmatrix} -y \\ \alpha \end{bmatrix} \ge 0
+		\text{ and }
+		\begin{bmatrix} b^t & \gamma \end{bmatrix}\begin{bmatrix} -y \\ \alpha \end{bmatrix} = -1
+		\text{.}
+	\]
+	The sign in $-y$ makes the end of the proof cleaner. To write this back out as constraints, we have
+	\begin{align*}
+		-A^t y + \alpha c &\ge 0 \\
+		y &\ge 0 \\
+		-b^t y + \alpha \gamma &= - 1
+	\end{align*}
+	We want to play with these constraints to show first that the dual is feasible, and then that its
+	optimal value must be equal to the primal's. To do this, we will need to remove the $\alpha$, and
+	we can do this by considering two case, $\alpha = 0$ and $\alpha \neq 0$.
+
+	Suppose $\alpha = 0$. Then,
+	\begin{align*}
+		A^t (-y) &\ge 0 \\
+		b^t (-y) &= - 1
+	\end{align*}
+	But this shows there exists $-y$ satisfying the second case of Farka's Lemma, which would mean the
+	primal is infeasible. However, we know the primal is feasible, so we know $\alpha \neq 0$.
+
+	Now that $\alpha \neq 0$, we can scale our constraints by $\alpha^{-1}$ so that the $\alpha$ drop
+	out. To keep the notation clean, this means we can just assume $\alpha = 1$, and keep using $y$:
+	\begin{align*}
+		-A^t y + c &\ge 0 \\
+		y &\ge 0 \\
+		-b^t y + \gamma &\le 0
+	\end{align*}
+	That last equality is written as an inequality to remove the $\alpha^{-1}$ from the right. These
+	constraints can be rewritten, and here is why I used $-y$,
+	\begin{align*}
+		A^t y &\le c \\
+		y &\ge 0 \\
+		b^t y &\ge \gamma
+	\end{align*}
+	This means $y$ is feasible for the dual problem, so the optimal value of the dual is also bounded
+	below by $\gamma$ since we are maximizing: $b^ty_* \ge b^t y \ge \gamma$. Then, combining that last
+	inequality with the bound from Weak Duality,
+	\[ c^tx_* \ge b^t y_* \ge \gamma = c^tx_* - \epsilon \]
+	And so finally, as $\epsilon \to 0$,
+	\[ c^tx_* = b^t y_* \text{.}\]
+\end{proof}
+
+At the beginning of the proof we assumed that both the primal and dual were feasible, and then used
+Weak Duality to show that the dual being feasible meant the primal was bounded, and then used the
+primal problem being feasible and bounded to get the optimal $x_*$. We could instead have started
+with the primal being both feasible and bounded, and not assumed anything about the dual, to get
+$x_*$. Then we could have used feasibility of the primal to get boundedness of the dual, and we
+construct a feasible $y$ for the dual in the proof so we know the dual is bounded.
+
+This argument works both ways, so the primal is feasible and bounded if and only if the dual is
+bounded.
+
+\end{document}
