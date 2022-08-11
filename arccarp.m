@@ -11,7 +11,7 @@ ticks = 500;
 is_polygon = false;
 
 % Generate the spiral
-%P = spiral(epsilon)
+P = spiral(epsilon)
 % Keep track of all P
 all_P = {};
 % P is a polygon if the first and last point is the same
@@ -28,7 +28,7 @@ ignored = repmat(false, size(P, 1), 1);
 ax = ([-epsilon, sum(L) + epsilon, -epsilon, sum(L) + epsilon]);
 % Create new frames cell array
 gif_filename = "spiral " + datestr(datetime, 31) + ".gif";
-%draw(P, 0, ax);
+draw(P, 0);
 
 % Keep track of velocities of all iterations, and preallocate
 V = zeros(2 * size(P, 1), ticks);
@@ -64,9 +64,9 @@ while not_done(P, is_polygon)
     bin = -1 * create_bin(P, is_polygon, resolution);
 	lb = repmat(-Inf, 2 * size(P, 1), 1);
 	ub = repmat(Inf, 2 * size(P, 1), 1);
-	lb(end - 3 : end) = 0
-	ub(end - 3 : end) = 0
-	x0 = linprog(zeros(2 * size(P, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "iter"))
+	lb(end - 3 : end) = 0;
+	ub(end - 3 : end) = 0;
+	x0 = linprog(zeros(2 * size(P, 1), 1), Ain, bin, Aeq, zeros(size(Aeq, 1), 1), fix, fix, optimoptions("linprog", "Display", "none"))
 
 		A = eye(4);
 		A(end + 1 : end + size(Aeq, 1), 1 : size(Aeq, 2)) = Aeq;
@@ -120,7 +120,7 @@ while not_done(P, is_polygon)
 	P
 
 	% Draw this iteration
-	% draw(P, i, ax);
+	draw(P, i);
 
 	% If converged to an infeasible point, stop
 	if exitflag < 0
@@ -155,12 +155,13 @@ end
 % Draw the polygon, change colors each time
 function draw(P, i)
 	% Cycle through the colors
-    colors = ["r" "g" "b" "c" "m" "y"];
-    color = colors(1 + mod(i, length(colors)));
+%     colors = ["r" "g" "b" "c" "m" "y"];
+%     color = colors(1 + mod(i, length(colors)));
 	% Don't show the plots as they are drawn
 	% Plot the arc, "-" connects the vertices, "o" puts a circle at the vertices
-    plot(P(:, 1), P(:, 2), "-o" + color);
+    plot(P(:, 1), P(:, 2), "-o");
 	title("i = " + num2str(i));
+    shg
 end
 
 % Return empty matrices
