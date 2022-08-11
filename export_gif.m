@@ -1,7 +1,20 @@
 function export_gif(filename, positions, count)
-	fps = 15;
+	min_fps = 15;
+	max_s = 10;
+	max_fps = 100;
 	padding = 0.25;
     h_res = 200;
+
+	skip = 2;
+	fps = max(min_fps, count / max_s);
+	if fps > max_fps
+		fps = max_fps;
+		skip = 1 + ceil(count / fps);
+	end
+	fprintf("%u fps, skipping by %u\n", fps, skip - 1);
+	% Start at one, the increase to skip (by skip - 1), but do include the last
+	% frame
+	js = [1 : skip : count, count];
 
 	% Get max and min coordinates
 	max_coords = [-Inf -Inf];
@@ -19,7 +32,7 @@ function export_gif(filename, positions, count)
     v_res = h_res * aspect_ratio;
 
 	fig = figure("Position", [0 0 v_res h_res], "Resize", false);
-	for j = 1 : count
+	for j = js
 		fprintf("\r%4u/%4u", j, count);
 
 		% Plot the jth P
