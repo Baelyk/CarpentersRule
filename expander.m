@@ -1,4 +1,8 @@
-function [positions, velocities] = expander(polygon, stepsize)
+function [positions, velocities] = expander(polygon, stepsize, expander_show)
+	if ~exist("expander_show", "var")
+		expander_show = false;
+	end
+
 	% E.g. (a, b +/- resolution) is considered (a, b)
 	resolution = stepsize;
 	% Estimated ticks needed, used for preallocation
@@ -19,17 +23,22 @@ function [positions, velocities] = expander(polygon, stepsize)
 
 	i = 0;
 	while not_done(polygon, is_polygon)
-		i = i + 1
-		remaining_vertices = length(polygon)
+		i = i + 1;
+		fprintf("\ri = %4u, %4u vertics remaining", i, length(polygon));
 
 		% Find the optimal solution
 		[v, exitflag] = find_velocity(polygon, is_polygon, resolution);
+
+		if any(norm(v) > 1 / stepsize)
+			fprintf(" !! The stepsize (%.3g) may be too small for max speed (%.3g)\n", stepsize, max(norm(v)));
+		end
 
 		% Store V
 		velocities{i} = v;
 
 		% Update the polygon and position
-		v = stepsize * v;
+		v = stepsize * v / norm(v);
+		v(isnan(v)) = 0;
 		[polygon, position] = update_positions(polygon, v, ignored, lengths);
 
 		% Remove the bar stretching
@@ -45,8 +54,16 @@ function [positions, velocities] = expander(polygon, stepsize)
 		end
 		positions{i} = position;
 
+		% Plot this position
+		if expander_show
+			plot(position(:, 1), position(:, 2), "-o");
+			title("i = " + num2str(i));
+			shg
+		end
+
 		% If converged to an infeasible point, stop
 		if exitflag == -2
+			fprintf("Stopping due to fmincon convering to infeasible point.\n");
 			break
 		end
 	end
@@ -61,7 +78,6 @@ function L = spiral_length(P)
 end
 
 function P = fix_lengths(P, L, ignored)
-	return
     for i = 3 : length(ignored)
 		if ignored(i)
 			continue

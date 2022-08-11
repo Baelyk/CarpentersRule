@@ -1,25 +1,9 @@
+% Exitflags:
+% 1: Using fmincon's output
+% 0: Using linprog's output
+% -1: Using rand output
+
 function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
-		% Encode the equalities into a matrix Aeq
-		Aeq = create_Aeq(polygon, is_polygon);
-		beq = zeros(size(Aeq, 1), 1);
-		cond(Aeq)
-		% Encode the inequalities
-		Ain = -1 * create_Ain(polygon, is_polygon);
-		cond(Ain)
-		bin = -1 * create_bin(polygon, is_polygon, resolution);
-		% Set the lower and upper bound of P(1,:) and P(2,:) to 0
-		fix = [0 0 0 0]';
-		% Start the optimization at the zero vector, height 2*n because each point has x and y velocity
-		%x0 = zeros(2 * size(polygon, 1), 1);
-		% Start at a feasible solution
-		size(Aeq)
-		rank(Aeq)
-		rank([Aeq zeros(size(Aeq, 1), 1)])
-		size(Ain)
-		rank(Ain)
-		rank([Ain bin(:)])
-		f = zeros(2 * size(polygon, 1), 1);
-		[x0, fval, exitflag, output, lambda] = linprog(f, Ain, bin, Aeq, beq, fix, fix, optimoptions("linprog", "Display", "iter", "Preprocess", "basic", "Diagnostics", "on", "MaxIterations", 1e4))
 		% HOW TO PIN OTHER EDGES EASILY
 		% Set some options:
 		% - Feasibility mode helps it find a solution
@@ -27,11 +11,49 @@ function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
 		%   finding  solution
 		% - Run the optimizer in parallel to use more cores
 		options = optimoptions(@fmincon, ...
+			"Algorithm", "sqp", ...
 			"EnableFeasibilityMode", true, ...
-			"MaxFunctionEvaluations", 10e4, ...
-			"MaxIterations", 10e4, ...
-			"Display", "iter", ...
+			"Display", "none", ...
 			"UseParallel", false);
+
+		% Encode the equalities into a matrix Aeq
+		Aeq = create_Aeq(polygon, is_polygon);
+		beq = zeros(size(Aeq, 1), 1);
+		% Encode the inequalities
+		Ain = -1 * create_Ain(polygon, is_polygon);
+		bin = -1 * create_bin(polygon, is_polygon, resolution);
+		if options.Algorithm ~= "sqp"
+			Aeq = sparse(Aeq);
+			Ain = sparse(Ain);
+			bin = sparse(bin);
+		end
+		% Set the lower and upper bound of P(1,:) and P(2,:) to 0
+		fix = [0 0 0 0]';
+		ub = inf(2 * size(polygon, 1), 1);
+		%ub(1 : 4) = fix;
+		lb = -ub;
+		% Start the optimization at the zero vector, height 2*n because each point has x and y velocity
+		%x0 = zeros(2 * size(polygon, 1), 1);
+		% Start at a feasible solution
+		f = zeros(2 * size(polygon, 1), 1);
+		[x0, fval, exitflag, output, lambda] = linprog(f, Ain, bin, Aeq, beq, [], ub, optimoptions("linprog", "Algorithm", "dual-simplex", "Display", "none", "Preprocess", "basic", "Diagnostics", "off"));
+
+		if exitflag ~= 1
+			fprintf(" !! linprog failed (%d) to find a feasible point, using 0 as initial\n", exitflag);
+			x0 = zeros(2 * size(polygon, 1), 1);
+			%m_eq = size(Aeq, 1);
+			%m_in = size(Ain, 1);
+			%n = size(Aeq, 2);
+			%A = sparse(m_eq + m_in, n + m_in);
+			%A(1 : m_eq, 1 : n) = Aeq;
+			%A(m_eq + 1 : m_eq + m_in, 1 : n) = Ain;
+			%%A(m_eq + 1 : m_eq + m_in, n + 1 : n + m_in) = -eye(m_in);
+
+			%b = [zeros(m_eq, 1); bin(:)];
+			%x0 = A \ b;
+			%norm(A * x0 - b)
+			%x0 = full(x0(1 : n))
+		end
 
 		% This gets the optimal v.
 		[velocity, ~, exitflag, output] = fmincon(...
@@ -48,14 +70,36 @@ function [velocity, exitflag] = find_velocity(polygon, is_polygon, resolution)
 			... % Our equaities are all = 0
 			zeros(size(Aeq, 1), 1), ...
 			... % The lower bound for the velocity of P(1) and P(2) is zero
-			fix, ...
+			lb, ...
 			... % The upper bound for the velocities of P(1) and P(2) is zero to fix them
-			fix, ...
+			ub, ...
 			... % donothing is a function that does nothing because we have no nonlinear
 			... %   constraints, but must still provde something to the optimizer
 			donothing, ...
 			... % Our options, as above
 			options);
+
+		% If converged to an infeasible point, use the linear programs feasible point
+		if exitflag == -2
+			%if output.bestfeasible ~= []
+				%fprintf(" !! fmincon converged to infeasible point, using its best feasible\n");
+				%velocity = output.bestfeasible.x;
+				%exitflag = 0;
+			%else
+				fprintf(" !! fmincon converged to infeasible point, using linprog's feasible point\n");
+				velocity = x0 / norm(x0);
+				%velocity(isnan(velocity)) = 0;
+				exitflag = 0;
+				if any(isnan(velocity))
+					fprintf(" !! velocity contained NaN, using rand velocity\n");
+					velocity = rand(size(velocity));
+					exitflag = -1;
+				end
+			%end
+		elseif exitflag ~= 1
+			fprintf(" !! fmincon exited with %d\n", exitflag);
+			exitflag = 1;
+		end
 
 	velocity = reshape(velocity, 2, [])';
 end
@@ -64,8 +108,9 @@ function Aeq = create_Aeq(P, is_polygon)
 	[m n] = size(P);
 	Aeq = [];
 
-	% Fix first and second vertices
-	%Aeq = eye(4);
+	% Fix kth bar
+	k = 1;
+	Aeq = [zeros(4, 2 * (k - 1)) eye(4)];
 
 	% Connect each point to the next one, ignoring the first and last.
 	for i = 1 : m - 1
