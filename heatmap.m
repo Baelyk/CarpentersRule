@@ -1,7 +1,7 @@
 function heatmap(positions, count)
     colors = colormap;
 
-	clf;
+	figure;
     hold on;
     for j = 1 : count
         % Get ith position
