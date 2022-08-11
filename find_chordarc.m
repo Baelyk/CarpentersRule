@@ -4,23 +4,23 @@ function chordarc = find_chordarc(polygon, samples)
 	reorder = polygon;
 
 	a=samples; % (input) number of random points on each edge
-	ran = rand(a,1);
+	ran = linspace(0, 1, samples)';
 	% a a*1 matrix of random scalar
 	% drawn from the uniform distribution in the interval (0,1).
 
 
-	for k = 1:a-1
-		for l = 2:a
-			if ran(k)== ran(l) % update a to get unique values
-				ran(l) = rand(1);
-			else
-				break
-			end
-		end
-	end
+	%for k = 1:a-1
+		%for l = 2:a
+			%if ran(k)== ran(l) % update a to get unique values
+				%ran(l) = rand(1);
+			%else
+				%break
+			%end
+		%end
+	%end
 
-	% reorder ran
-	ran = sort(ran);
+	%% reorder ran
+	%ran = sort(ran);
 
 	edgePoints = [];
 	for idx = 1:n
@@ -34,7 +34,7 @@ function chordarc = find_chordarc(polygon, samples)
 	end
 	edgePoints = [edgePoints;reorder(end,:)];
 	% this connects the last point on edge to the first vertex
-	plot(edgePoints(:,1),edgePoints(:,2),'ro-','LineWidth',2)
+	%plot(edgePoints(:,1),edgePoints(:,2),'ro-','LineWidth',2)
 
 
 
@@ -60,7 +60,7 @@ function chordarc = find_chordarc(polygon, samples)
 	end
 
 	G = graph(s, t, weights);
-	plot(G,'EdgeLabel',G.Edges.Weight)
+	%plot(G,'EdgeLabel',G.Edges.Weight)
 	%trying to output the result with weights but does not work
 
 	% Caculate Chord-Arc Constant between any two points
