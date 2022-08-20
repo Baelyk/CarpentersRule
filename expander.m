@@ -18,26 +18,39 @@ function [positions, velocities] = expander(polygon, stepsize, expander_show)
 		is_polygon = true;
 		polygon = polygon(1 : end - 1, :);
     end
+	position = polygon;
 	lengths = spiral_length(polygon);
 	ignored = false(size(polygon, 1), 1);
 
 	i = 0;
 	while not_done(polygon, is_polygon)
 		i = i + 1;
+
+		% Save this position
+		if is_polygon
+			% Add first to end if a polygon
+			position(end + 1, :) = position(1, :);
+		end
+		positions{i} = position;
+
+		% Start this iteration
 		fprintf("\ri = %4u, %4u vertics remaining", i, length(polygon));
 
 		% Find the optimal solution
 		[v, exitflag] = find_velocity(polygon, is_polygon, resolution);
+		speed = max(vecnorm(v'));
 
-		if any(norm(v) > 1 / stepsize)
+		if any(speed > 1 / stepsize)
 			fprintf(" !! The stepsize (%.3g) may be too small for max speed (%.3g)\n", stepsize, max(norm(v)));
+			log(speed) + log(stepsize)
+			v = v / 10^(log(speed) + log(stepsize))
 		end
 
 		% Store V
 		velocities{i} = v;
 
 		% Update the polygon and position
-		v = stepsize * v / norm(v);
+		v = stepsize * v;
 		v(isnan(v)) = 0;
 		[polygon, position] = update_positions(polygon, v, ignored, lengths);
 
@@ -46,13 +59,6 @@ function [positions, velocities] = expander(polygon, stepsize, expander_show)
 
 		% Check for colinear bars
 		[polygon, lengths, ignored] = remove_colinear_bars(polygon, lengths, ignored, is_polygon, resolution);
-
-		% Save this position
-		if is_polygon
-			% Add first to end if a polygon
-			position(end + 1, :) = position(1, :);
-		end
-		positions{i} = position;
 
 		% Plot this position
 		if expander_show

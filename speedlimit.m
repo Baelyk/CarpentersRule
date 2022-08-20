@@ -103,7 +103,13 @@ function [output, polygons, ignored] = speedlimit(options)
 			print("plot_" + timestamp, "-dpng")
 		end
 		writematrix(output, "speeds_" + timestamp + ".csv");
-		writecell(polygons, "polygons_" + timestamp + ".csv");
+
+		filename = "polygons_" + timestamp + ".csv";
+		for idx = 1 : num
+			polygon = polygons{idx};
+			writematrix(polygon, filename, WriteMode = "append");
+			writelines("", filename, WriteMode = "append");
+		end
 	end
 
 	fprintf("\n");

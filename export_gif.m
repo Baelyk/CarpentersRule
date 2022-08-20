@@ -1,9 +1,22 @@
-function export_gif(filename, positions, count)
-	min_fps = 15;
-	max_s = 10;
-	max_fps = 100;
+function export_gif(filename, positions, options)
+	arguments
+		filename
+		positions
+		options.Count = length(positions)
+		options.Resolution = 200
+		options.MaxDuration = 10
+		options.MaxFPS = 100
+		options.MinFPS = 15
+		options.Explode = false
+		options.LWidth = 1
+	end
+
+	count = options.Count;
+	min_fps = options.MinFPS;
+	max_s = options.MaxDuration;
+	max_fps = options.MaxFPS;
 	padding = 0.25;
-    h_res = 200;
+    v_res = round(options.Resolution);
 
 	skip = 2;
 	fps = max(min_fps, count / max_s);
@@ -11,7 +24,6 @@ function export_gif(filename, positions, count)
 		fps = max_fps;
 		skip = 1 + ceil(count / fps);
 	end
-	fprintf("%u fps, skipping by %u\n", fps, skip - 1);
 	% Start at one, the increase to skip (by skip - 1), but do include the last
 	% frame
 	js = [1 : skip : count, count];
@@ -29,15 +41,17 @@ function export_gif(filename, positions, count)
     % Create figure with proper aspect ratio
     aspect_ratio = abs((max_coords(1) - min_coords(1)) ...
         / (max_coords(2) - min_coords(2)));
-    v_res = h_res * aspect_ratio;
+    h_res = round(v_res * aspect_ratio);
 
-	fig = figure("Position", [0 0 v_res h_res], "Resize", false);
+	fprintf("%u fps, skipping by %u, %ux%u\n", round(fps), skip - 1, h_res, v_res);
+
+	fig = figure("Position", [0 0 h_res v_res], "Resize", false);
 	for j = js
 		fprintf("\r%4u/%4u", j, count);
 
 		% Plot the jth P
 		P = positions{j};
-		plot(P(:, 1), P(:, 2), "-o");
+		plot(P(:, 1), P(:, 2), "-o", LineWidth = options.LWidth);
 		title("i = " + num2str(j));
 		% Set the axis
 		axis([min_coords(1) max_coords(1) min_coords(2) max_coords(2)] ...
