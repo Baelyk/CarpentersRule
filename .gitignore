@@ -3,3 +3,4 @@
 *.csv
 *.asv
 build/
+.ipynb_checkpoints/
