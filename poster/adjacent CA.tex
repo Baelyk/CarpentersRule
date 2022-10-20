@@ -1,0 +1,77 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsfonts,fullpage,amsthm,amssymb}
+\usepackage{thmtools}
+\usepackage{enumitem}
+
+% Better matrices, namely augmented
+% https://tex.stackexchange.com/a/2244
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols{c}]{%
+	\hskip -\arraycolsep
+	\let\@ifnextchar\new@ifnextchar
+	\array{#1}}
+\makeatother
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{ifthen}
+% Code blocks
+\usepackage[outputdir=latex-build]{minted}
+
+\usepackage[table]{xcolor}
+
+% TikZ for Graphs
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{positioning, quotes}
+
+% Defining shortcut macros
+\newcommand\Z{\mathbb{Z}}
+\newcommand\R{{\mathbb{R}}}
+\newcommand\Q{{\mathbb{Q}}}
+\newcommand\C{{\mathbb{C}}}
+\newcommand\N{{\mathbb{N}}}
+\newcommand\F{{\mathcal{F}}}
+\newcommand\TR{{\operatorname{tr}}}
+% Replace \P make paragraph symbol with \P makes \mathcal{P} for power sets
+\renewcommand\P{{\mathcal{P}}}
+\newcommand{\then}{\Rightarrow}
+
+\DeclareMathOperator{\im}{Im}
+\DeclareMathOperator{\arccot}{arccot}
+
+\declaretheoremstyle[
+	spaceabove={1em plus 0.1em minus 0.2em},
+	notefont=\bfseries,
+	notebraces={}{},
+	headformat=\ifthenelse{\equal{\NOTE}{}}{\NAME{} \NUMBER}{\!\!\NOTE}
+]
+{thm}
+\usetikzlibrary{quotes,angles}
+\begin{document}
+
+\begin{figure}[h]
+	\centering
+	\begin{tikzpicture}
+		\draw [black, thick](0, 0)-- (6, 0);
+		\draw[black, thick] (0,0)-- (4, 4) ;
+	    \filldraw[red] (0,0) circle (3pt) node[anchor=west]{};
+	    \filldraw[red] (4.242640687,0) circle (3pt) node[anchor=west]{};
+	    \filldraw[red] (3,3) circle (3pt) node[anchor=west]{};
+		\draw
+        (3,3) coordinate (x) node[anchor = north west] {\Huge x}
+        -- (0,0) coordinate (v) node[left] {\Huge v}
+        -- (4.242640687,0) coordinate (y) node[below] {\Huge y}
+        pic["\Huge$ \theta$",draw=blue, very thick, <->, angle eccentricity=1.5, angle radius=1cm] {angle=y--v--x};
+		
+		
+	\end{tikzpicture}
+	% \caption{A vertex $v$ with a angle of $\theta$ and points $x$ and $y$ equidistant to $v$}
+	\label{fig:adjacent chordarc}
+\end{figure}
+
+\end{document}
+
+		
