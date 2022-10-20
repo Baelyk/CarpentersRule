@@ -20,4 +20,4 @@ University: University of Wisconsin-Madison
 ## Summer 2022 REU at UW-Madison
 
 - [Presentation Video](https://youtu.be/63-uckn3nbU)
-- [Poster](poster/Carpenter_s_Rule.pdf)
+- [Poster](poster/Carpenter_s_Rule.pdf): ![Poster image](poster.png)
