@@ -8,8 +8,6 @@ University: University of Wisconsin - Madison
 
 ## Description
 
-Our project aims to explore a computational geometry problem, Carpenter’s Rule Problem, and relate to the Chord-arc Constant with an optimization-based approach. 
-
 The Carpenter’s Rule Problem asks if any polygon or any arc composed of line segments can be straightened to a convex polygon or line, respectively. During this process, the polygon should not be allowed to cross itself, and the lengths of edges must stay fixed. This problem was solved by Connelly, Demaine, and Rote in 2003 by turning this question into an optimization problem very similar to linear programming. 
 
 Our goal in this project is to find numerical evidence of a universal “speed” limit, which, under suitable assumptions and normalizations, depends only on the Chord-arc Constant of the curve, and further study the relationship between these two quantities. The Chord-arc Constant of a curve is the supremum of the ratio between the shortest arc distance and the Euclidean distance between any two points. Along the way, we have proved that for adjacent edges on a random polygon, the Chord-arc constant is achieved when two points are equidistant to the joint vertex. For non-adjacent edges, we found evidence that the initial speed limit of polygon expander is bounded by the Chord-arc Constant. 
