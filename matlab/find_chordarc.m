@@ -1,4 +1,4 @@
-% Carrie and Caroline's random chordarc
+% Random Chord-arc Constant Calculation
 function chordarc = find_chordarc(polygon, samples)
 	n = length(polygon) - 1;
 	reorder = polygon;
